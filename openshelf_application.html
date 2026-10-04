@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenShelf: Book Discovery & Reading List Explorer</title>
+    
+    <!-- Fonts: Playfair Display for editorial titles, Inter for UI text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        library: {
+                            50: '#fdfbf7',
+                            100: '#f7f2e8',
+                            200: '#eee3cf',
+                            300: '#e1cdac',
+                            400: '#cfad80',
+                            500: '#be8e58',
+                            600: '#a87343',
+                            700: '#8c5a36',
+                            800: '#724931',
+                            900: '#5e3c2b',
+                            950: '#341f16',
+                        },
+                        night: {
+                            800: '#1a1816',
+                            900: '#12100e',
+                            950: '#0a0908',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Smooth Transitions & Shimmer Effects */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .font-serif-header {
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, rgba(225,205,172,0.2) 25%, rgba(225,205,172,0.4) 37%, rgba(225,205,172,0.2) 63%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        .dark .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 37%, rgba(255,255,255,0.05) 63%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        .book-card {
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .book-card:hover {
+            transform: translateY(-6px);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(168,115,67,0.4);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(168,115,67,0.7);
+        }
+        
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-library-50 text-stone-800 dark:bg-night-900 dark:text-stone-200 min-h-screen flex flex-col antialiased selection:bg-library-300 dark:selection:bg-library-800">
+
+    <!-- 1. HEADER & NAVIGATION -->
+    <header class="sticky top-0 z-30 bg-library-100/90 dark:bg-night-800/90 backdrop-blur-md border-b border-library-200 dark:border-stone-800 transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('discover')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-library-600 to-library-800 text-amber-100 flex items-center justify-center shadow-md shadow-library-900/10">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-serif-header text-xl sm:text-2xl font-bold tracking-tight text-library-950 dark:text-amber-100 leading-none">
+                        Open<span class="text-library-600 dark:text-library-400">Shelf</span>
+                    </h1>
+                    <p class="text-[10px] text-stone-500 dark:text-stone-400 font-medium tracking-wider uppercase mt-0.5 hidden sm:block">Discovery & Reading List</p>
+                </div>
+            </div>
+
+            <!-- Tab Switcher Navigation -->
+            <nav class="flex items-center bg-library-200/60 dark:bg-stone-800/60 p-1 rounded-xl border border-library-300/50 dark:border-stone-700/50">
+                <button id="navDiscoverBtn" onclick="switchTab('discover')" class="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-sm font-semibold transition-all bg-white dark:bg-stone-700 text-library-900 dark:text-amber-100 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <span>Discover Books</span>
+                </button>
+                <button id="navReadingListBtn" onclick="switchTab('readingList')" class="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-sm font-semibold transition-all text-stone-600 dark:text-stone-300 hover:text-library-900 dark:hover:text-amber-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                    </svg>
+                    <span>My Reading List</span>
+                    <span id="navBadge" class="ml-0.5 bg-library-600 text-white dark:bg-library-500 dark:text-stone-950 text-[11px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center transition-transform scale-100">0</span>
+                </button>
+            </nav>
+
+            <!-- Theme Toggle & Project Docs Modal Trigger -->
+            <div class="flex items-center gap-2">
+                <button onclick="openDocsModal()" title="View README & Docs" class="p-2.5 rounded-xl border border-library-200 dark:border-stone-700 hover:bg-library-200/50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+
+                <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" class="p-2.5 rounded-xl border border-library-200 dark:border-stone-700 hover:bg-library-200/50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 transition-colors">
+                    <svg id="themeSun" class="w-5 h-5 hidden dark:block text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <svg id="themeMoon" class="w-5 h-5 block dark:hidden text-library-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+        <!-- 2. DISCOVER / SEARCH VIEW -->
+        <section id="discoverView" class="space-y-6">
+            
+            <!-- Hero Search Header -->
+            <div class="bg-gradient-to-r from-library-100 via-library-200/40 to-library-100 dark:from-stone-900 dark:via-stone-800/50 dark:to-stone-900 p-6 sm:p-8 rounded-2xl border border-library-200 dark:border-stone-800 shadow-sm relative overflow-hidden">
+                <div class="max-w-3xl mx-auto text-center space-y-4 relative z-10">
+                    <h2 class="font-serif-header text-2xl sm:text-4xl font-bold text-library-950 dark:text-amber-100 tracking-tight">
+                        Explore Open Library & Curate Your Library
+                    </h2>
+                    <p class="text-stone-600 dark:text-stone-300 text-sm sm:text-base max-w-xl mx-auto">
+                        Search live literature data by title, author, or subject. Save items instantly to your persistent local reading queue.
+                    </p>
+
+                    <!-- Search Form & Filters -->
+                    <form id="searchForm" onsubmit="handleSearchSubmit(event)" class="pt-2 flex flex-col sm:flex-row items-stretch gap-2 max-w-2xl mx-auto">
+                        
+                        <!-- Filter Selector -->
+                        <div class="relative">
+                            <select id="searchFilterType" class="w-full sm:w-auto h-12 rounded-xl bg-white dark:bg-stone-800 border border-library-300 dark:border-stone-700 px-3 pr-8 text-xs sm:text-sm font-medium text-stone-700 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-library-500 cursor-pointer appearance-none h-full">
+                                <option value="q">Everything</option>
+                                <option value="title">Title</option>
+                                <option value="author">Author</option>
+                                <option value="subject">Subject</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-stone-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Input Bar with Debounce -->
+                        <div class="relative flex-grow">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                            <input type="text" id="searchInput" placeholder="Search books (e.g., 'Frankenstein', 'Tolkien')..." autocomplete="off" class="w-full h-12 pl-10 pr-10 rounded-xl bg-white dark:bg-stone-800 border border-library-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 placeholder-stone-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-library-500 shadow-inner">
+                            <button type="button" id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-600 dark:hover:text-stone-200">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+
+                        <button type="submit" class="h-12 px-6 rounded-xl bg-library-700 hover:bg-library-800 active:bg-library-900 text-amber-50 font-semibold text-sm transition-colors shadow-md flex items-center justify-center gap-2 shrink-0">
+                            <span>Search</span>
+                        </button>
+                    </form>
+
+                    <!-- Quick Subject Filter Pills -->
+                    <div class="pt-2 flex flex-wrap items-center justify-center gap-2">
+                        <span class="text-xs text-stone-500 font-medium">Quick Topics:</span>
+                        <div id="topicChips" class="flex flex-wrap gap-1.5 justify-center">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Toolbar & Sorting -->
+            <div id="resultsToolbar" class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-library-200 dark:border-stone-800">
+                <div>
+                    <h3 id="resultsStatusText" class="font-serif-header text-lg font-bold text-stone-800 dark:text-stone-200">
+                        Popular Discoveries
+                    </h3>
+                    <p id="resultsSubtext" class="text-xs text-stone-500 dark:text-stone-400">Showing top literature suggestions</p>
+                </div>
+
+                <div class="flex items-center gap-2 self-end sm:self-auto">
+                    <label for="sortSelector" class="text-xs font-medium text-stone-500 dark:text-stone-400 whitespace-nowrap">Sort by:</label>
+                    <select id="sortSelector" onchange="handleSortChange(this.value)" class="bg-white dark:bg-stone-800 border border-library-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-library-500 cursor-pointer">
+                        <option value="relevance">Relevance</option>
+                        <option value="newest">First Published (Newest)</option>
+                        <option value="oldest">First Published (Oldest)</option>
+                        <option value="title">Title (A-Z)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Search Results Grid (Responsive auto-fill minmax 200px) -->
+            <div id="searchResultsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                <!-- Skeletons or book cards inserted here -->
+            </div>
+
+            <!-- Empty / Error State -->
+            <div id="searchEmptyState" class="hidden text-center py-16 px-4 space-y-3 bg-white dark:bg-stone-800/40 rounded-2xl border border-dashed border-library-300 dark:border-stone-700">
+                <div class="w-16 h-16 mx-auto rounded-full bg-library-100 dark:bg-stone-800 flex items-center justify-center text-library-600 dark:text-stone-400">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <h4 class="font-serif-header text-lg font-semibold text-stone-800 dark:text-stone-200">Search for books above...</h4>
+                <p id="emptyStateDetail" class="text-xs text-stone-500 max-w-sm mx-auto">Type a book title or author keyword to explore live metadata.</p>
+            </div>
+        </section>
+
+        <!-- 3. READING LIST VIEW ("MY QUEUE") -->
+        <section id="readingListView" class="hidden space-y-6">
+            
+            <!-- Summary Stats Bar -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-white dark:bg-stone-800/80 p-4 rounded-xl border border-library-200 dark:border-stone-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wider font-semibold">Total Saved</p>
+                        <p id="statTotal" class="text-2xl font-bold font-serif-header text-library-950 dark:text-amber-100 mt-0.5">0</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-library-100 dark:bg-stone-700 text-library-700 dark:text-amber-200 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-stone-800/80 p-4 rounded-xl border border-library-200 dark:border-stone-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wider font-semibold">To Read</p>
+                        <p id="statToRead" class="text-2xl font-bold font-serif-header text-amber-700 dark:text-amber-400 mt-0.5">0</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-300 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-stone-800/80 p-4 rounded-xl border border-library-200 dark:border-stone-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wider font-semibold">Reading</p>
+                        <p id="statReading" class="text-2xl font-bold font-serif-header text-blue-700 dark:text-blue-400 mt-0.5">0</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-stone-800/80 p-4 rounded-xl border border-library-200 dark:border-stone-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wider font-semibold">Finished</p>
+                        <p id="statFinished" class="text-2xl font-bold font-serif-header text-emerald-700 dark:text-emerald-400 mt-0.5">0</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reading List Filters & Backup Controls -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white dark:bg-stone-800 p-3 sm:p-4 rounded-xl border border-library-200 dark:border-stone-700 shadow-sm">
+                
+                <!-- Status Filter Pills -->
+                <div class="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+                    <button onclick="setQueueFilter('all')" id="filterBtnAll" class="queue-filter-btn active px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-library-700 text-white dark:bg-library-600">All Books</button>
+                    <button onclick="setQueueFilter('To Read')" id="filterBtnToRead" class="queue-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-stone-600 dark:text-stone-300 hover:bg-library-100 dark:hover:bg-stone-700">To Read</button>
+                    <button onclick="setQueueFilter('Currently Reading')" id="filterBtnReading" class="queue-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-stone-600 dark:text-stone-300 hover:bg-library-100 dark:hover:bg-stone-700">Reading</button>
+                    <button onclick="setQueueFilter('Finished')" id="filterBtnFinished" class="queue-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-stone-600 dark:text-stone-300 hover:bg-library-100 dark:hover:bg-stone-700">Finished</button>
+                </div>
+
+                <!-- Saved Search & JSON Export/Import -->
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-grow sm:w-48">
+                        <input type="text" id="queueSearchInput" oninput="renderSavedBooksGrid()" placeholder="Filter saved..." class="w-full h-8 pl-8 pr-3 text-xs rounded-lg bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-1 focus:ring-library-500">
+                        <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+
+                    <button onclick="exportReadingListJSON()" title="Export JSON backup" class="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-library-300 dark:border-stone-700 hover:bg-library-100 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span class="hidden md:inline">Export</span>
+                    </button>
+
+                    <label title="Import JSON backup" class="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-library-300 dark:border-stone-700 hover:bg-library-100 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 flex items-center gap-1.5 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        <span class="hidden md:inline">Import</span>
+                        <input type="file" id="importFileInput" accept=".json" onchange="importReadingListJSON(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Saved Books Grid Container -->
+            <div id="savedBooksGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                <!-- Injected dynamically -->
+            </div>
+
+            <!-- Empty Queue State -->
+            <div id="queueEmptyState" class="hidden text-center py-16 px-4 space-y-4 bg-white dark:bg-stone-800/40 rounded-2xl border border-dashed border-library-300 dark:border-stone-700">
+                <div class="w-16 h-16 mx-auto rounded-full bg-library-100 dark:bg-stone-800 flex items-center justify-center text-library-600 dark:text-stone-400">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                </div>
+                <h4 class="font-serif-header text-lg font-semibold text-stone-800 dark:text-stone-200">Your queue is empty</h4>
+                <p class="text-xs text-stone-500 max-w-sm mx-auto">Explore titles in the Discover tab and add them to your reading list.</p>
+                <button onclick="switchTab('discover')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-library-700 hover:bg-library-800 text-white text-xs font-semibold transition-colors">
+                    <span>Explore Literature</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 4. BOOK DETAIL MODAL -->
+    <div id="bookModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-library-200 dark:border-stone-700 transform scale-95 transition-transform duration-200 relative" id="modalContainer">
+            
+            <button onclick="closeBookModal()" class="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-700 text-stone-500 hover:text-stone-800 dark:hover:text-stone-100 flex items-center justify-center transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+
+            <div id="modalBody" class="p-6 sm:p-8 space-y-6">
+                <!-- Injected dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- PROJECT DOCUMENTATION & SUBMISSION README MODAL -->
+    <div id="docsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-library-200 dark:border-stone-700 transform scale-95 transition-transform duration-200 relative p-6 sm:p-8 space-y-6" id="docsContainer">
+            
+            <div class="flex items-center justify-between border-b border-stone-200 dark:border-stone-700 pb-4">
+                <h3 class="font-serif-header text-xl font-bold text-stone-900 dark:text-amber-100">Project Documentation & README</h3>
+                <button onclick="closeDocsModal()" class="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-700 text-stone-500 hover:text-stone-800 flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed">
+                <div>
+                    <h4 class="font-bold text-base text-library-700 dark:text-amber-300 mb-1">1. Project Description</h4>
+                    <p><strong>OpenShelf</strong> is a clean, responsive web application built for avid readers, students, and book clubs. It provides rapid search capabilities, publication details, and a personal reading queue powered by client-side persistence.</p>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-base text-library-700 dark:text-amber-300 mb-1">2. How to Run</h4>
+                    <p>Save the complete code into a single file named <code>index.html</code> (or separate into <code>index.html</code>, <code>style.css</code>, and <code>app.js</code>). Double-click or open the HTML file in any modern web browser. No backend server or authentication keys required!</p>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-base text-library-700 dark:text-amber-300 mb-1">3. Data Source Credits</h4>
+                    <p>This application utilizes the public, unauthenticated <strong>Open Library Search API</strong> (<a href="https://openlibrary.org/developers/api" target="_blank" class="underline text-library-600 dark:text-amber-300">https://openlibrary.org/developers/api</a>) for live book metadata and cover art thumbnails.</p>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-base text-library-700 dark:text-amber-300 mb-1">4. AI Assistance Disclosure</h4>
+                    <p>This project was developed with assistance from Google Gemini AI to scaffold component architecture, implement robust asynchronous API handlers, and design an accessible, responsive user interface following modern web standards.</p>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-stone-200 dark:border-stone-700 flex justify-end">
+                <button onclick="closeDocsModal()" class="px-4 py-2 rounded-xl bg-library-700 text-white font-semibold text-xs">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-library-200 dark:border-stone-800 bg-library-100/50 dark:bg-stone-900/50 py-6 text-center text-xs text-stone-500 dark:text-stone-400">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p>© OpenShelf — Literature Discovery powered by <a href="https://openlibrary.org" target="_blank" rel="noopener" class="underline hover:text-library-700 dark:hover:text-amber-300">Open Library API</a></p>
+            <p class="text-[11px]">Vanilla JS • LocalStorage • Tailwind CSS</p>
+        </div>
+    </footer>
+
+    <!-- APPLICATION JAVASCRIPT LOGIC -->
+    <script>
+        const LOCAL_STORAGE_KEY = 'openshelf_reading_list';
+        const LOCAL_THEME_KEY = 'openshelf_theme';
+
+        const QUICK_TOPICS = [
+            'Fiction', 'Science', 'History', 'Fantasy', 'Mystery', 
+            'Biography', 'Classics', 'Philosophy', 'Romance', 'Poetry'
+        ];
+
+        let state = {
+            currentView: 'discover',
+            searchQuery: 'classic literature',
+            searchFilter: 'q',
+            sortOption: 'relevance',
+            searchResults: [],
+            isLoading: false,
+            savedBooks: {},
+            queueFilter: 'all',
+            modalBook: null,
+            theme: 'light'
+        };
+
+        // --- DEBOUNCE UTILITY ---
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            loadSavedBooksFromStorage();
+            renderTopicChips();
+            updateNavBadge();
+
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', debounce((e) => {
+                const val = e.target.value.trim();
+                const clearBtn = document.getElementById('clearSearchBtn');
+                if (val.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+                
+                if (val.length >= 3) {
+                    executeSearch(val, document.getElementById('searchFilterType').value);
+                }
+            }, 400));
+
+            executeSearch(state.searchQuery, state.searchFilter);
+        });
+
+        // --- THEME CONTROL ---
+        function initTheme() {
+            const savedTheme = localStorage.getItem(LOCAL_THEME_KEY) || 
+                (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            setTheme(savedTheme);
+        }
+
+        function toggleTheme() {
+            setTheme(state.theme === 'light' ? 'dark' : 'light');
+        }
+
+        function setTheme(theme) {
+            state.theme = theme;
+            localStorage.setItem(LOCAL_THEME_KEY, theme);
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        // --- TAB SWITCHER ---
+        function switchTab(tabName) {
+            state.currentView = tabName;
+            const discoverView = document.getElementById('discoverView');
+            const readingListView = document.getElementById('readingListView');
+            const navDiscoverBtn = document.getElementById('navDiscoverBtn');
+            const navReadingListBtn = document.getElementById('navReadingListBtn');
+
+            const activeClass = ['bg-white', 'dark:bg-stone-700', 'text-library-900', 'dark:text-amber-100', 'shadow-sm'];
+            const inactiveClass = ['text-stone-600', 'dark:text-stone-300', 'hover:text-library-900', 'dark:hover:text-amber-100'];
+
+            if (tabName === 'discover') {
+                discoverView.classList.remove('hidden');
+                readingListView.classList.add('hidden');
+                navDiscoverBtn.classList.add(...activeClass);
+                navDiscoverBtn.classList.remove(...inactiveClass);
+                navReadingListBtn.classList.remove(...activeClass);
+                navReadingListBtn.classList.add(...inactiveClass);
+            } else {
+                discoverView.classList.add('hidden');
+                readingListView.classList.remove('hidden');
+                navReadingListBtn.classList.add(...activeClass);
+                navReadingListBtn.classList.remove(...inactiveClass);
+                navDiscoverBtn.classList.remove(...activeClass);
+                navDiscoverBtn.classList.add(...inactiveClass);
+                renderSavedBooksGrid();
+            }
+        }
+
+        // --- QUICK TOPIC CHIPS ---
+        function renderTopicChips() {
+            const container = document.getElementById('topicChips');
+            container.innerHTML = QUICK_TOPICS.map(topic => `
+                <button type="button" onclick="searchTopic('${topic}')" 
+                    class="px-2.5 py-1 rounded-lg text-xs font-medium bg-white dark:bg-stone-800 border border-library-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:border-library-500 hover:text-library-700 dark:hover:text-amber-200 transition-colors">
+                    ${topic}
+                </button>
+            `).join('');
+        }
+
+        function searchTopic(topic) {
+            const input = document.getElementById('searchInput');
+            const filterType = document.getElementById('searchFilterType');
+            input.value = topic;
+            filterType.value = 'subject';
+            document.getElementById('clearSearchBtn').classList.remove('hidden');
+            executeSearch(topic, 'subject');
+        }
+
+        function clearSearchInput() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            input.focus();
+        }
+
+        function handleSearchSubmit(event) {
+            event.preventDefault();
+            const input = document.getElementById('searchInput').value.trim();
+            const filterType = document.getElementById('searchFilterType').value;
+            if (input) executeSearch(input, filterType);
+        }
+
+        // --- API INTEGRATION ---
+        async function executeSearch(query, filter = 'q') {
+            if (!query) return;
+            state.searchQuery = query;
+            state.searchFilter = filter;
+            state.isLoading = true;
+
+            renderSkeletons();
+            updateResultsHeader(`Searching for "${query}"...`, 'Connecting to Open Library API');
+
+            try {
+                const paramKey = filter === 'q' ? 'q' : filter;
+                const url = `https://openlibrary.org/search.json?${paramKey}=${encodeURIComponent(query)}&limit=30`;
+                
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network error');
+                
+                const data = await response.json();
+                state.searchResults = (data.docs || []).map(doc => normalizeBookData(doc));
+                state.isLoading = false;
+
+                applySortingAndRender();
+                showToast(`Found ${data.numFound || state.searchResults.length} books`, 'info');
+            } catch (error) {
+                console.error('API Error:', error);
+                state.isLoading = false;
+                renderEmptyState(`Failed to fetch books from Open Library. Please try again.`);
+                showToast('API Connection Error', 'error');
+            }
+        }
+
+        function normalizeBookData(doc) {
+            const key = doc.key ? doc.key.replace('/works/', '') : Math.random().toString(36).substr(2, 9);
+            const coverId = doc.cover_i;
+            
+            return {
+                id: key,
+                rawKey: doc.key,
+                title: doc.title || 'Untitled Work',
+                author: doc.author_name ? doc.author_name.join(', ') : 'Unknown Author',
+                publishYear: doc.first_publish_year || doc.publish_year?.[0] || 'N/A',
+                editionCount: doc.edition_count || 1,
+                coverId: coverId,
+                coverMedium: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null,
+                coverLarge: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null,
+                isbn: doc.isbn ? doc.isbn[0] : 'N/A',
+                subjects: doc.subject ? doc.subject.slice(0, 6) : [],
+                publisher: doc.publisher ? doc.publisher[0] : 'Unknown Publisher',
+            };
+        }
+
+        // --- SORTING & RENDERING ---
+        function handleSortChange(sortVal) {
+            state.sortOption = sortVal;
+            applySortingAndRender();
+        }
+
+        function applySortingAndRender() {
+            let sorted = [...state.searchResults];
+
+            if (state.sortOption === 'newest') {
+                sorted.sort((a, b) => (parseInt(b.publishYear) || 0) - (parseInt(a.publishYear) || 0));
+            } else if (state.sortOption === 'oldest') {
+                sorted.sort((a, b) => (parseInt(a.publishYear) || 9999) - (parseInt(b.publishYear) || 9999));
+            } else if (state.sortOption === 'title') {
+                sorted.sort((a, b) => a.title.localeCompare(b.title));
+            }
+
+            renderSearchResultsGrid(sorted);
+        }
+
+        function renderSkeletons() {
+            const grid = document.getElementById('searchResultsGrid');
+            document.getElementById('searchEmptyState').classList.add('hidden');
+            grid.classList.remove('hidden');
+
+            grid.innerHTML = Array(10).fill(0).map(() => `
+                <div class="bg-white dark:bg-stone-800 rounded-xl overflow-hidden border border-library-200 dark:border-stone-700 p-3 space-y-3">
+                    <div class="w-full aspect-[2/3] rounded-lg skeleton"></div>
+                    <div class="h-4 rounded w-3/4 skeleton"></div>
+                    <div class="h-3 rounded w-1/2 skeleton"></div>
+                    <div class="h-8 rounded-lg skeleton"></div>
+                </div>
+            `).join('');
+        }
+
+        function updateResultsHeader(title, subtext) {
+            document.getElementById('resultsStatusText').textContent = title;
+            document.getElementById('resultsSubtext').textContent = subtext;
+        }
+
+        function renderSearchResultsGrid(books) {
+            const grid = document.getElementById('searchResultsGrid');
+            const emptyState = document.getElementById('searchEmptyState');
+
+            if (!books || books.length === 0) {
+                renderEmptyState(`No results found for "${state.searchQuery}".`);
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.classList.remove('hidden');
+            updateResultsHeader(`Results for "${state.searchQuery}"`, `${books.length} items cataloged`);
+            grid.innerHTML = books.map(book => createBookCardHTML(book)).join('');
+        }
+
+        function renderEmptyState(message) {
+            const grid = document.getElementById('searchResultsGrid');
+            const emptyState = document.getElementById('searchEmptyState');
+            grid.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            document.getElementById('emptyStateDetail').textContent = message;
+            updateResultsHeader('No Results', 'Try another search query');
+        }
+
+        // --- BOOK CARD COMPONENT ---
+        function createBookCardHTML(book) {
+            const isSaved = !!state.savedBooks[book.id];
+            const savedData = state.savedBooks[book.id] || {};
+            const status = savedData.status || 'To Read';
+            const coverSrc = book.coverMedium || generateFallbackCoverDataUrl(book.title, book.author);
+
+            return `
+                <div class="book-card bg-white dark:bg-stone-800/90 rounded-xl border border-library-200 dark:border-stone-700/80 overflow-hidden shadow-sm flex flex-col justify-between group relative">
+                    <div class="relative w-full aspect-[2/3] bg-stone-100 dark:bg-stone-900 overflow-hidden cursor-pointer" onclick="openBookModal('${book.id}')">
+                        <img src="${coverSrc}" alt="${escapeHTML(book.title)}" loading="lazy" onerror="this.onerror=null; this.src='${generateFallbackCoverDataUrl(book.title, book.author)}';" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <div class="absolute inset-0 bg-stone-950/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                            <span class="text-[11px] font-semibold text-white bg-stone-900/80 px-2 py-1 rounded-md">View Details</span>
+                        </div>
+                        ${isSaved ? `
+                            <div class="absolute top-2 right-2 bg-library-700 text-amber-100 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
+                                ${status}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="p-3 sm:p-4 flex flex-col flex-grow justify-between space-y-2">
+                        <div>
+                            <h4 class="font-serif-header text-sm sm:text-base font-bold text-stone-900 dark:text-stone-100 line-clamp-2 leading-snug cursor-pointer hover:text-library-700 dark:hover:text-amber-300" onclick="openBookModal('${book.id}')">
+                                ${escapeHTML(book.title)}
+                            </h4>
+                            <p class="text-xs text-stone-600 dark:text-stone-400 font-medium line-clamp-1 mt-0.5">
+                                ${escapeHTML(book.author)}
+                            </p>
+                        </div>
+
+                        <div class="pt-1 text-[11px] text-stone-400 flex items-center justify-between border-t border-stone-100 dark:border-stone-700/50">
+                            <span>${book.publishYear !== 'N/A' ? 'Pub: ' + book.publishYear : 'Open Library'}</span>
+                            <span>${book.editionCount} ed.</span>
+                        </div>
+
+                        <div class="pt-1">
+                            ${isSaved ? `
+                                <button onclick="toggleSaveBook('${book.id}')" class="w-full py-1.5 px-2 rounded-lg text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-red-50 hover:text-red-600 transition-colors flex items-center justify-center gap-1 group/btn">
+                                    <span class="group-hover/btn:hidden">Saved</span>
+                                    <span class="hidden group-hover/btn:inline">Remove</span>
+                                </button>
+                            ` : `
+                                <button onclick="toggleSaveBook('${book.id}')" class="w-full py-1.5 px-2 rounded-lg text-xs font-semibold bg-library-100 dark:bg-stone-700 hover:bg-library-700 hover:text-white dark:hover:bg-library-600 text-library-900 dark:text-amber-100 transition-colors flex items-center justify-center gap-1">
+                                    <span>Add to Queue</span>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- LOCAL STORAGE STATE ---
+        function loadSavedBooksFromStorage() {
+            try {
+                const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (stored) state.savedBooks = JSON.parse(stored);
+            } catch (e) {
+                state.savedBooks = {};
+            }
+        }
+
+        function saveBooksToStorage() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.savedBooks));
+                updateNavBadge();
+                updateStatsSummary();
+            } catch (e) {
+                showToast('Storage Limit Exceeded', 'error');
+            }
+        }
+
+        function toggleSaveBook(bookId) {
+            if (state.savedBooks[bookId]) {
+                delete state.savedBooks[bookId];
+                saveBooksToStorage();
+                showToast('Removed from reading list', 'info');
+            } else {
+                let bookToSave = state.searchResults.find(b => b.id === bookId) || (state.modalBook && state.modalBook.id === bookId ? state.modalBook : null);
+                if (bookToSave) {
+                    state.savedBooks[bookId] = {
+                        ...bookToSave,
+                        status: 'To Read',
+                        rating: 0,
+                        notes: '',
+                        savedAt: new Date().toISOString()
+                    };
+                    saveBooksToStorage();
+                    showToast('Added to To-Read queue!', 'success');
+                }
+            }
+
+            if (state.currentView === 'discover') applySortingAndRender();
+            else renderSavedBooksGrid();
+        }
+
+        function updateNavBadge() {
+            const count = Object.keys(state.savedBooks).length;
+            document.getElementById('navBadge').textContent = count;
+        }
+
+        // --- READING LIST QUEUE VIEW ---
+        function setQueueFilter(filter) {
+            state.queueFilter = filter;
+            const filters = { 'all': 'filterBtnAll', 'To Read': 'filterBtnToRead', 'Currently Reading': 'filterBtnReading', 'Finished': 'filterBtnFinished' };
+            Object.keys(filters).forEach(key => {
+                const btn = document.getElementById(filters[key]);
+                if (key === filter) {
+                    btn.className = "queue-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-library-700 text-white dark:bg-library-600";
+                } else {
+                    btn.className = "queue-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-stone-600 dark:text-stone-300 hover:bg-library-100 dark:hover:bg-stone-700";
+                }
+            });
+            renderSavedBooksGrid();
+        }
+
+        function renderSavedBooksGrid() {
+            const grid = document.getElementById('savedBooksGrid');
+            const emptyState = document.getElementById('queueEmptyState');
+            const queueSearch = document.getElementById('queueSearchInput').value.toLowerCase();
+
+            let books = Object.values(state.savedBooks);
+            if (state.queueFilter !== 'all') books = books.filter(b => b.status === state.queueFilter);
+            if (queueSearch) books = books.filter(b => b.title.toLowerCase().includes(queueSearch) || b.author.toLowerCase().includes(queueSearch));
+
+            if (books.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                grid.classList.remove('hidden');
+                grid.innerHTML = books.map(book => createSavedBookCardHTML(book)).join('');
+            }
+            updateStatsSummary();
+        }
+
+        function createSavedBookCardHTML(book) {
+            const coverSrc = book.coverMedium || generateFallbackCoverDataUrl(book.title, book.author);
+            const ratingStars = Array(5).fill(0).map((_, i) => `
+                <svg class="w-3.5 h-3.5 ${i < book.rating ? 'text-amber-400 fill-amber-400' : 'text-stone-300 dark:text-stone-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                </svg>
+            `).join('');
+
+            return `
+                <div class="bg-white dark:bg-stone-800/90 rounded-xl border border-library-200 dark:border-stone-700/80 overflow-hidden shadow-sm flex flex-col justify-between">
+                    <div class="p-3 flex gap-3">
+                        <img src="${coverSrc}" alt="${escapeHTML(book.title)}" class="w-20 h-28 object-cover rounded-lg shrink-0 cursor-pointer shadow-xs" onclick="openBookModal('${book.id}')" />
+                        <div class="flex flex-col justify-between flex-grow min-w-0">
+                            <div>
+                                <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-library-100 dark:bg-stone-700 text-library-800 dark:text-amber-200">${book.status}</span>
+                                <h4 class="font-serif-header text-sm font-bold text-stone-900 dark:text-stone-100 line-clamp-2 mt-1 cursor-pointer hover:text-library-700" onclick="openBookModal('${book.id}')">
+                                    ${escapeHTML(book.title)}
+                                </h4>
+                                <p class="text-xs text-stone-500 dark:text-stone-400 line-clamp-1 mt-0.5">${escapeHTML(book.author)}</p>
+                            </div>
+                            <div class="flex items-center gap-0.5 mt-2">${ratingStars}</div>
+                        </div>
+                    </div>
+                    ${book.notes ? `<div class="px-3 py-1.5 bg-stone-50 dark:bg-stone-900/50 border-t border-stone-100 dark:border-stone-700 text-xs italic text-stone-600 dark:text-stone-400 line-clamp-1">"${escapeHTML(book.notes)}"</div>` : ''}
+                    <div class="p-2 bg-library-50/50 dark:bg-stone-900/30 border-t border-library-200/60 dark:border-stone-700 flex items-center justify-between text-xs">
+                        <button onclick="openBookModal('${book.id}')" class="text-library-700 dark:text-amber-300 font-medium hover:underline px-2 py-1">Edit Notes & Status</button>
+                        <button onclick="toggleSaveBook('${book.id}')" class="text-stone-400 hover:text-red-500 p-1" title="Remove">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateStatsSummary() {
+            const books = Object.values(state.savedBooks);
+            document.getElementById('statTotal').textContent = books.length;
+            document.getElementById('statToRead').textContent = books.filter(b => b.status === 'To Read').length;
+            document.getElementById('statReading').textContent = books.filter(b => b.status === 'Currently Reading').length;
+            document.getElementById('statFinished').textContent = books.filter(b => b.status === 'Finished').length;
+        }
+
+        // --- BOOK DETAIL MODAL ---
+        function openBookModal(bookId) {
+            let book = state.savedBooks[bookId] || state.searchResults.find(b => b.id === bookId);
+            if (!book) return;
+            state.modalBook = { ...book };
+
+            const modal = document.getElementById('bookModal');
+            const container = document.getElementById('modalContainer');
+            const modalBody = document.getElementById('modalBody');
+
+            const isSaved = !!state.savedBooks[bookId];
+            const currentStatus = isSaved ? state.savedBooks[bookId].status : 'To Read';
+            const currentRating = isSaved ? state.savedBooks[bookId].rating : 0;
+            const currentNotes = isSaved ? state.savedBooks[bookId].notes || '' : '';
+            const coverSrc = book.coverLarge || book.coverMedium || generateFallbackCoverDataUrl(book.title, book.author);
+
+            modalBody.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="w-full md:w-1/3 shrink-0 flex flex-col items-center">
+                        <img src="${coverSrc}" alt="${escapeHTML(book.title)}" onerror="this.onerror=null; this.src='${generateFallbackCoverDataUrl(book.title, book.author)}';" class="w-44 md:w-full max-w-[200px] aspect-[2/3] object-cover rounded-xl shadow-lg border border-stone-200 dark:border-stone-700" />
+                        ${book.rawKey ? `<a href="https://openlibrary.org${book.rawKey}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1.5 text-xs text-library-700 dark:text-amber-300 hover:underline"><span>Open Library Page</span></a>` : ''}
+                    </div>
+                    <div class="w-full md:w-2/3 space-y-4">
+                        <div>
+                            <h3 class="font-serif-header text-xl sm:text-2xl font-bold text-stone-900 dark:text-stone-100">${escapeHTML(book.title)}</h3>
+                            <p class="text-sm font-semibold text-library-700 dark:text-amber-300 mt-1">By ${escapeHTML(book.author)}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs text-stone-600 dark:text-stone-300">
+                            <span class="bg-stone-100 dark:bg-stone-700 px-2.5 py-1 rounded-md">Published: ${book.publishYear}</span>
+                            <span class="bg-stone-100 dark:bg-stone-700 px-2.5 py-1 rounded-md">Publisher: ${escapeHTML(book.publisher)}</span>
+                            <span class="bg-stone-100 dark:bg-stone-700 px-2.5 py-1 rounded-md">ISBN: ${book.isbn}</span>
+                        </div>
+                        ${book.subjects && book.subjects.length > 0 ? `
+                            <div>
+                                <h5 class="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">Subjects</h5>
+                                <div class="flex flex-wrap gap-1">${book.subjects.map(s => `<span class="text-[11px] bg-library-100 dark:bg-stone-700 text-stone-700 dark:text-stone-300 px-2 py-0.5 rounded">${escapeHTML(s)}</span>`).join('')}</div>
+                            </div>
+                        ` : ''}
+                        <hr class="border-stone-200 dark:border-stone-700" />
+                        <div class="space-y-4 pt-1">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">Reading Status</label>
+                                    <select id="modalStatusSelect" class="w-full text-xs rounded-lg bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 p-2 text-stone-800 dark:text-stone-200">
+                                        <option value="To Read" ${currentStatus === 'To Read' ? 'selected' : ''}>To Read</option>
+                                        <option value="Currently Reading" ${currentStatus === 'Currently Reading' ? 'selected' : ''}>Currently Reading</option>
+                                        <option value="Finished" ${currentStatus === 'Finished' ? 'selected' : ''}>Finished</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">Personal Rating</label>
+                                    <div class="flex items-center gap-1 pt-1">
+                                        ${[1, 2, 3, 4, 5].map(star => `
+                                            <button type="button" onclick="setModalRating(${star})" class="focus:outline-none">
+                                                <svg id="star-${star}" class="w-5 h-5 ${star <= currentRating ? 'text-amber-400 fill-amber-400' : 'text-stone-300 dark:text-stone-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">Reader Notes</label>
+                                <textarea id="modalNotesText" rows="3" placeholder="Add reflections or notes..." class="w-full text-xs rounded-lg bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 p-2 text-stone-800 dark:text-stone-200">${escapeHTML(currentNotes)}</textarea>
+                            </div>
+                            <div class="flex items-center gap-3 pt-2">
+                                <button onclick="saveModalChanges('${book.id}')" class="flex-grow py-2.5 px-4 rounded-xl bg-library-700 hover:bg-library-800 text-amber-50 font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2">
+                                    <span>${isSaved ? 'Update Saved Details' : 'Save to My Queue'}</span>
+                                </button>
+                                ${isSaved ? `<button onclick="toggleSaveBook('${book.id}'); closeBookModal();" class="py-2.5 px-3 rounded-xl border border-red-200 text-red-600 text-xs font-semibold">Remove</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            container.classList.remove('scale-95');
+            container.classList.add('scale-100');
+        }
+
+        let tempModalRating = 0;
+        function setModalRating(rating) {
+            tempModalRating = rating;
+            for (let i = 1; i <= 5; i++) {
+                const starEl = document.getElementById(`star-${i}`);
+                if (starEl) {
+                    if (i <= rating) starEl.classList.add('text-amber-400', 'fill-amber-400');
+                    else starEl.classList.remove('text-amber-400', 'fill-amber-400');
+                }
+            }
+        }
+
+        function saveModalChanges(bookId) {
+            const status = document.getElementById('modalStatusSelect').value;
+            const notes = document.getElementById('modalNotesText').value.trim();
+            let book = state.savedBooks[bookId] || state.modalBook;
+
+            state.savedBooks[bookId] = {
+                ...book,
+                status: status,
+                rating: tempModalRating || book.rating || 0,
+                notes: notes,
+                savedAt: state.savedBooks[bookId]?.savedAt || new Date().toISOString()
+            };
+
+            saveBooksToStorage();
+            closeBookModal();
+            showToast('Reading log updated!', 'success');
+            if (state.currentView === 'readingList') renderSavedBooksGrid();
+            else applySortingAndRender();
+        }
+
+        function closeBookModal() {
+            const modal = document.getElementById('bookModal');
+            const container = document.getElementById('modalContainer');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            tempModalRating = 0;
+        }
+
+        function openDocsModal() {
+            const m = document.getElementById('docsModal');
+            m.classList.remove('opacity-0', 'pointer-events-none');
+        }
+        function closeDocsModal() {
+            const m = document.getElementById('docsModal');
+            m.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        // --- EXPORT / IMPORT BACKUPS ---
+        function exportReadingListJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.savedBooks, null, 2));
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `OpenShelf_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(dl);
+            dl.click();
+            dl.remove();
+            showToast('Exported backup file!', 'info');
+        }
+
+        function importReadingListJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (typeof imported === 'object' && imported !== null) {
+                        state.savedBooks = { ...state.savedBooks, ...imported };
+                        saveBooksToStorage();
+                        renderSavedBooksGrid();
+                        showToast('Reading list imported successfully!', 'success');
+                    }
+                } catch (err) {
+                    showToast('Failed to import JSON file', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // --- TOAST NOTIFICATION SYSTEM ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgColors = {
+                success: 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-emerald-500',
+                error: 'bg-red-900 text-white border-red-500',
+                info: 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-library-500'
+            };
+
+            toast.className = `px-4 py-3 rounded-xl shadow-xl border-l-4 text-xs font-semibold flex items-center justify-between gap-3 pointer-events-auto transform translate-y-4 opacity-0 transition-all duration-300 ${bgColors[type] || bgColors.info}`;
+            toast.innerHTML = `<span>${escapeHTML(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // --- FALLBACK COVER SVG GENERATOR ---
+        function generateFallbackCoverDataUrl(title, author) {
+            const cleanTitle = escapeHTML(title || 'Book');
+            const cleanAuthor = escapeHTML(author || 'Author');
+            const svg = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="450" viewBox="0 0 300 450">
+                    <rect width="300" height="450" fill="#724931"/>
+                    <rect x="15" y="15" width="270" height="420" fill="none" stroke="#e1cdac" stroke-width="2" stroke-opacity="0.4" rx="4"/>
+                    <text x="150" y="190" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#fdfbf7" text-anchor="middle" width="240">${cleanTitle.substring(0, 30)}</text>
+                    <text x="150" y="280" font-family="sans-serif" font-size="13" fill="#eee3cf" text-anchor="middle">${cleanAuthor.substring(0, 25)}</text>
+                </svg>
+            `;
+            return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+    </script>
+</body>
+</html>
