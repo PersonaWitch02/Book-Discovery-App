@@ -1,0 +1,49 @@
+/* ==========================================================================
+   OpenShelf Custom Stylesheet
+   ========================================================================== */
+
+/* Smooth Scrolling & Selection */
+html {
+    scroll-behavior: smooth;
+}
+
+::selection {
+    background-color: #b45309;
+    color: #ffffff;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d6d3d1;
+    border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #44403c;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a29e;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #57534e;
+}
+
+/* Card Hover Animations & Transitions */
+.book-card {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.book-card:hover {
+    transform: translateY(-4px);
+}

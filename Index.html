@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenShelf: Book Discovery & Reading List Explorer</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        amber: { 850: '#78350f', 900: '#451a03' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-stone-50 text-stone-800 dark:bg-stone-950 dark:text-stone-100 min-h-screen flex flex-col transition-colors duration-300 font-sans">
+
+    <!-- Header & Navigation -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('discover')">
+                <div class="w-10 h-10 rounded-xl bg-amber-700 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-book-open text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight">OpenShelf</h1>
+                    <p class="text-xs text-stone-500 dark:text-stone-400">Discovery & Reading List</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="hidden md:flex items-center space-x-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
+                <button id="nav-discover" onclick="switchTab('discover')" class="px-4 py-2 text-sm font-medium rounded-lg transition-all bg-white dark:bg-stone-700 text-amber-800 dark:text-amber-300 shadow-sm">
+                    <i class="fa-solid fa-compass mr-2"></i>Discover
+                </button>
+                <button id="nav-reading-list" onclick="switchTab('reading-list')" class="px-4 py-2 text-sm font-medium rounded-lg transition-all text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white">
+                    <i class="fa-solid fa-bookmark mr-2"></i>My Queue <span id="reading-badge" class="ml-1.5 px-2 py-0.5 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 rounded-full font-bold">0</span>
+                </button>
+            </nav>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-2">
+                <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition" title="Toggle Theme">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+                <button onclick="openModal('docsModal')" class="w-10 h-10 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition" title="Submission Info & README">
+                    <i class="fa-solid fa-circle-info"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Tab Navigation Bar -->
+        <div class="md:hidden flex border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
+            <button onclick="switchTab('discover')" id="mob-nav-discover" class="flex-1 py-3 text-center text-sm font-medium border-b-2 border-amber-700 text-amber-700 dark:text-amber-400">
+                <i class="fa-solid fa-compass mr-1"></i>Discover
+            </button>
+            <button onclick="switchTab('reading-list')" id="mob-nav-reading-list" class="flex-1 py-3 text-center text-sm font-medium border-b-2 border-transparent text-stone-500 dark:text-stone-400">
+                <i class="fa-solid fa-bookmark mr-1"></i>Queue (<span id="mob-reading-badge">0</span>)
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- ================= DISCOVER TAB ================= -->
+        <section id="tab-discover" class="space-y-6">
+            <!-- Hero Search & Filter Area -->
+            <div class="bg-gradient-to-br from-amber-900 via-stone-900 to-stone-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+                    <i class="fa-solid fa-book-bookmark text-9xl"></i>
+                </div>
+                <div class="max-w-2xl relative z-10 space-y-4">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-700/60 text-amber-200 backdrop-blur-sm">
+                        <i class="fa-solid fa-bolt mr-1.5 text-amber-300"></i> Open Library Live REST API
+                    </span>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Explore Millions of Books</h2>
+                    <p class="text-stone-300 text-sm sm:text-base">Search by title, author name, or ISBN, and instantly compile your personal reading list.</p>
+                    
+                    <!-- Search Input Bar -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"></i>
+                            <input type="text" id="searchInput" placeholder="Search title (e.g., 'Dune', 'Pride and Prejudice', '1984')..." 
+                                class="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white/20 transition text-sm">
+                        </div>
+                        <button onclick="triggerSearch()" class="px-6 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-2xl shadow-lg transition flex items-center justify-center space-x-2">
+                            <span>Search</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- Popular Quick Subject Tags -->
+                    <div class="pt-2 flex flex-wrap items-center gap-2">
+                        <span class="text-xs text-stone-400 font-medium mr-1">Trending Topics:</span>
+                        <button onclick="searchByTag('fiction')" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition border border-white/10">Fiction</button>
+                        <button onclick="searchByTag('science_fiction')" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition border border-white/10">Sci-Fi</button>
+                        <button onclick="searchByTag('mystery')" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition border border-white/10">Mystery</button>
+                        <button onclick="searchByTag('history')" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition border border-white/10">History</button>
+                        <button onclick="searchByTag('fantasy')" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition border border-white/10">Fantasy</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls: Result Count & Sorting -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-stone-200 dark:border-stone-800 pb-4">
+                <div>
+                    <h3 id="resultHeading" class="text-xl font-bold tracking-tight">Discover Results</h3>
+                    <p id="resultSubheading" class="text-xs text-stone-500 dark:text-stone-400">Type a query above or click a topic tag to get started.</p>
+                </div>
+                <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <label class="text-xs text-stone-500 dark:text-stone-400 whitespace-nowrap">Sort by:</label>
+                    <select id="sortSelect" onchange="sortResults()" class="bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="relevance">Relevance</option>
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="title">Title (A-Z)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingState" class="hidden py-20 text-center">
+                <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-amber-600 border-t-transparent"></div>
+                <p class="mt-3 text-sm text-stone-500 dark:text-stone-400 font-medium">Fetching books from Open Library API...</p>
+            </div>
+
+            <!-- Empty / Initial State -->
+            <div id="initialState" class="py-20 text-center max-w-md mx-auto space-y-3">
+                <div class="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+                    <i class="fa-solid fa-books"></i>
+                </div>
+                <h4 class="font-bold text-lg">Start Exploring Literature</h4>
+                <p class="text-xs text-stone-500 dark:text-stone-400">Search for your favorite books or pick a trending topic tag above to load live records.</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="hidden py-16 text-center max-w-md mx-auto space-y-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-6">
+                <i class="fa-solid fa-triangle-exclamation text-3xl text-red-500"></i>
+                <h4 class="font-bold text-red-700 dark:text-red-400">Unable to Fetch Books</h4>
+                <p id="errorMessage" class="text-xs text-red-600 dark:text-red-300">Please check your internet connection and try again.</p>
+                <button onclick="triggerSearch()" class="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-semibold hover:bg-red-500 transition">Retry Search</button>
+            </div>
+
+            <!-- Book Grid Container (CSS Grid matching guidelines) -->
+            <div id="bookGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+        </section>
+
+        <!-- ================= READING LIST TAB ================= -->
+        <section id="tab-reading-list" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-stone-900 p-6 rounded-3xl border border-stone-200 dark:border-stone-800 shadow-sm">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight">My Reading Queue</h2>
+                    <p class="text-xs text-stone-500 dark:text-stone-400">Manage your saved books, update progress status, add ratings, and notes.</p>
+                </div>
+                <!-- Backup & Restore Actions -->
+                <div class="flex items-center space-x-2 w-full sm:w-auto">
+                    <button onclick="exportReadingListJSON()" class="flex-1 sm:flex-none px-4 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-download text-amber-600"></i><span>Export JSON</span>
+                    </button>
+                    <label class="flex-1 sm:flex-none px-4 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-2 cursor-pointer">
+                        <i class="fa-solid fa-upload text-amber-600"></i><span>Import JSON</span>
+                        <input type="file" id="importFile" accept=".json" onchange="importReadingListJSON(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Filter Status Bar -->
+            <div class="flex flex-wrap items-center gap-2 pb-2">
+                <span class="text-xs font-medium text-stone-500 dark:text-stone-400 mr-2">Filter Status:</span>
+                <button onclick="filterQueue('all')" id="filter-all" class="px-3.5 py-1.5 text-xs font-medium rounded-xl bg-amber-700 text-white shadow-sm transition">All Books (<span id="count-all">0</span>)</button>
+                <button onclick="filterQueue('To Read')" id="filter-To Read" class="px-3.5 py-1.5 text-xs font-medium rounded-xl bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-300 transition">To Read (<span id="count-To Read">0</span>)</button>
+                <button onclick="filterQueue('Currently Reading')" id="filter-Currently Reading" class="px-3.5 py-1.5 text-xs font-medium rounded-xl bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-300 transition">Currently Reading (<span id="count-Currently Reading">0</span>)</button>
+                <button onclick="filterQueue('Finished')" id="filter-Finished" class="px-3.5 py-1.5 text-xs font-medium rounded-xl bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-300 transition">Finished (<span id="count-Finished">0</span>)</button>
+            </div>
+
+            <!-- Reading List Grid -->
+            <div id="readingGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+
+            <!-- Empty Queue State -->
+            <div id="emptyQueueState" class="hidden py-20 text-center max-w-md mx-auto space-y-3">
+                <div class="w-16 h-16 bg-stone-100 dark:bg-stone-800 text-stone-400 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-bookmark"></i>
+                </div>
+                <h4 class="font-bold text-lg">Your Reading List is Empty</h4>
+                <p class="text-xs text-stone-500 dark:text-stone-400">Browse books in the Discover tab and click "Save to Queue" to add them here.</p>
+                <button onclick="switchTab('discover')" class="px-4 py-2 bg-amber-700 text-white rounded-xl text-xs font-semibold hover:bg-amber-600 transition">Explore Discover</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= BOOK DETAIL MODAL ================= -->
+    <div id="bookModal" class="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button onclick="closeModal('bookModal')" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-stone-600 dark:text-stone-300 transition z-10">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="modalContent" class="p-6 sm:p-8 space-y-6"></div>
+        </div>
+    </div>
+
+    <!-- ================= SUBMISSION INFO & README MODAL ================= -->
+    <div id="docsModal" class="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button onclick="closeModal('docsModal')" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-stone-600 dark:text-stone-300 transition z-10">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="p-6 sm:p-8 space-y-6">
+                <div class="border-b border-stone-200 dark:border-stone-800 pb-4">
+                    <span class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-widest">Project Documentation</span>
+                    <h2 class="text-2xl font-extrabold tracking-tight mt-1">OpenShelf: Book Discovery & Reading List Explorer</h2>
+                </div>
+
+                <div class="space-y-4 text-sm text-stone-600 dark:text-stone-300">
+                    <div>
+                        <h3 class="font-bold text-stone-900 dark:text-white text-base mb-1">1. Description & Target User</h3>
+                        <p>Built for avid readers, students, and book clubs, OpenShelf is a clean, responsive web application designed to make searching for literature, exploring publication details, and managing a personal reading list fast and friction-free.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-stone-900 dark:text-white text-base mb-1">2. How to Run</h3>
+                        <p>This project is structured with modular vanilla web assets (<code class="bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">index.html</code>, <code class="bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">style.css</code>, <code class="bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">app.js</code>). To run locally:</p>
+                        <ol class="list-decimal list-inside space-y-1 mt-2 pl-2">
+                            <li>Download or clone the three files into the same folder.</li>
+                            <li>Open <code class="bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">index.html</code> directly in any modern web browser, or serve it via a local static server (e.g., Live Server in VS Code).</li>
+                        </ol>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-stone-900 dark:text-white text-base mb-1">3. Data Source Credits</h3>
+                        <p>Powered by the public <a href="https://openlibrary.org/developers/api" target="_blank" class="text-amber-600 hover:underline font-medium">Open Library Search API</a>, a free, unauthenticated REST endpoint providing live book metadata, author details, and cover art thumbnails.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-stone-900 dark:text-white text-base mb-1">4. AI Assistance Disclosure</h3>
+                        <p>AI-assisted development tools were utilized to generate modular starter code, establish Tailwind CSS responsive utility classes, and structure robust asynchronous JavaScript logic for API integration and <code class="bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">localStorage</code> state persistence.</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-stone-200 dark:border-stone-800 flex justify-end">
+                    <button onclick="closeModal('docsModal')" class="px-5 py-2.5 bg-amber-700 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold transition">Close Documentation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Feedback Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-stone-900 text-white dark:bg-white dark:text-stone-900 px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 text-xs font-medium">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage">Action successful</span>
+    </div>
+
+    <!-- JavaScript Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
